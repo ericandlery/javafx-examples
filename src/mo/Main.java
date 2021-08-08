@@ -17,6 +17,9 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
+import org.mockserver.client.MockServerClient;
+import org.mockserver.integration.ClientAndServer;
+import org.mockserver.model.MediaType;
 
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -39,8 +42,8 @@ public class Main extends Application {
         rightTa.setMinHeight(500);
         rightTa.setPrefWidth(200);
 
-        Button leftBt = new Button("To myBatis");
-        Button rightBt = new Button("To Tool");
+        Button leftBt = new Button("To Right");
+        Button rightBt = new Button("To Left");
 
         leftBt.setOnAction(event -> {
             rightTa.setText(convertToMyBatis(leftTa.getText()));
@@ -60,14 +63,94 @@ public class Main extends Application {
         v2.setAlignment(Pos.CENTER);
         v2.setSpacing(10);
 
-        HBox h = new HBox(v1, v2);
+        ToggleGroup menuToggle = new ToggleGroup();
+        ToggleButton sqlBtn = new ToggleButton("SQL");
+        ToggleButton camelBtn = new ToggleButton("camelCase");
+        ToggleButton mockServerBtn = new ToggleButton("MockServer");
+        ToggleButton embeddedServerBtn = new ToggleButton("EmbeddedServer");
+        sqlBtn.setToggleGroup(menuToggle);
+        camelBtn.setToggleGroup(menuToggle);
+        mockServerBtn.setToggleGroup(menuToggle);
+        embeddedServerBtn.setToggleGroup(menuToggle);
+        sqlBtn.setSelected(true);
+        VBox vMenu = new VBox(sqlBtn, camelBtn, mockServerBtn, embeddedServerBtn);
+
+        sqlBtn.setOnAction(event -> {
+            sqlBtn.setSelected(true);
+            leftLabel.setText("Tool's SQL");
+            rightLabel.setText("MyBatis SQL");
+            rightBt.setDisable(false);
+
+            leftBt.setOnAction(event2 -> {
+                rightTa.setText(convertToMyBatis(leftTa.getText()));
+            });
+            rightBt.setOnAction(event2 -> {
+                leftTa.setText(convertToTool(rightTa.getText()));
+            });
+
+            HBox h = new HBox(vMenu, v1, v2);
+            h.setAlignment(Pos.CENTER);
+            h.setSpacing(5);
+            Scene s = new Scene(h, 1000, 600);
+            primaryStage.setScene(s);
+        });
+        camelBtn.setOnAction(event -> {
+            camelBtn.setSelected(true);
+            leftLabel.setText("Column Names");
+            rightLabel.setText("Properties");
+            rightBt.setDisable(true);
+
+            leftBt.setOnAction(event2 -> {
+                rightTa.setText(convertToCamelCase(leftTa.getText()));
+            });
+
+            HBox h = new HBox(vMenu, v1, v2);
+            h.setAlignment(Pos.CENTER);
+            h.setSpacing(5);
+            Scene s = new Scene(h, 1000, 600);
+            primaryStage.setScene(s);
+        });
+        mockServerBtn.setOnAction(event -> {
+            mockServerBtn.setSelected(true);
+
+            Label hostLabel = new Label("host");
+            TextField hostField = new TextField();
+            hostField.setText("localhost");
+            Label portLabel = new Label("port");
+            TextField portField = new TextField();
+            portField.setText("1080");
+
+            VBox mockServerV = new VBox(hostLabel, hostField, portLabel, portField);
+            mockServerV.setPrefWidth(805);
+            HBox h = new HBox(vMenu, mockServerV);
+            h.setAlignment(Pos.CENTER);
+            h.setSpacing(5);
+            Scene s = new Scene(h, 1000, 600);
+            primaryStage.setScene(s);
+        });
+        embeddedServerBtn.setOnAction(event -> {
+            // TODO DEV
+            MockServerTools mTool = MockServerTools.getInstance()
+                    .setHost("localhost")
+                    .setPort(1080)
+                    .setMethod("GET")
+                    .setPath("/")
+                    .setStatusCode(200)
+                    .setContentType(MediaType.APPLICATION_JSON_UTF_8)
+                    .setBody("{\"name\":\"kimi\"}")
+                    .startup();
+            primaryStage.setOnCloseRequest(event1 -> {
+                mTool.shutdown();
+            });
+        });
+
+        HBox h = new HBox(vMenu, v1, v2);
         h.setAlignment(Pos.CENTER);
         h.setSpacing(5);
 
         Scene s = new Scene(h, 1000, 600);
 
         primaryStage.setScene(s);
-
         primaryStage.show();
     }
 
@@ -86,6 +169,11 @@ public class Main extends Application {
         String result = sql
                 .replaceAll(":([a-zA-Z0-9]+)", "#{$1}");
         return result;
+    }
+
+    public String convertToCamelCase(String names){
+        // TODO
+        return "TODO";
     }
 
 }
