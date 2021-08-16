@@ -1,5 +1,6 @@
 package mo;
 
+import com.google.common.base.CaseFormat;
 import javafx.application.Application;
 import javafx.event.EventHandler;
 import javafx.geometry.Pos;
@@ -21,16 +22,21 @@ import org.mockserver.client.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.MediaType;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class Main extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        primaryStage.setTitle("Jud Tool-MyBatis SQL Converter");
+        primaryStage.setTitle("Dev Jud Tools");
 
         Label leftLabel = new Label("Tool's SQL");
         Label rightLabel = new Label("MyBatis SQL");
@@ -129,6 +135,10 @@ public class Main extends Application {
             primaryStage.setScene(s);
         });
         embeddedServerBtn.setOnAction(event -> {
+            if(1==1){
+                System.out.println("TODO");
+                return;
+            }
             // TODO DEV
             MockServerTools mTool = MockServerTools.getInstance()
                     .setHost("localhost")
@@ -158,22 +168,34 @@ public class Main extends Application {
         launch(args);
     }
 
-    public String convertToTool(String sql){
+    private String convertToTool(String sql){
         String result = sql
                 .replace("#{", ":")
                 .replace("}", "");
         return result;
     }
 
-    public String convertToMyBatis(String sql){
+    private String convertToMyBatis(String sql){
         String result = sql
                 .replaceAll(":([a-zA-Z0-9]+)", "#{$1}");
         return result;
     }
 
-    public String convertToCamelCase(String names){
-        // TODO
-        return "TODO";
+    private String convertToCamelCase(String names){
+        List<String> ognNames = Arrays.asList(names.split("\n"));
+        List<String> list = new ArrayList<>();
+        String result;
+        list = ognNames.stream()
+                .map(line
+                        -> "private "
+                        + (line.equals("SEQ")
+                        || line.equals("ROWID")
+                        || line.equals("PLNTF_COUNT")
+                        || line.equals("DFDNT_COUNT")
+                        ? "Long " : "String ")
+                        + CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, line.replace(",", "")) + ";")
+                .collect(Collectors.toList());
+        return list.stream().collect(Collectors.joining("\n"));
     }
 
 }
