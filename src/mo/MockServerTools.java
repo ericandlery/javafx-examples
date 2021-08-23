@@ -3,7 +3,6 @@ package mo;
 import org.mockserver.client.MockServerClient;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.MediaType;
-import org.mockserver.model.PortBinding;
 
 import static org.mockserver.model.HttpRequest.request;
 import static org.mockserver.model.HttpResponse.response;
@@ -79,8 +78,18 @@ public class MockServerTools {
     }
 
     public void shutdown(){
-        mockServer.stop();
-        System.out.println("Mock Server Shut Down!");
+        if(mockServer != null && mockServer.isRunning()){
+            mockServer.stop();
+            System.out.println("Mock Server Shut Down!");
+        }
+    }
+
+    public boolean isUp(){
+        if(mockServer != null && mockServer.isRunning()){
+            return true;
+        }else{
+            return false;
+        }
     }
 
 }
