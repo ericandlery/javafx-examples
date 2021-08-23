@@ -2,37 +2,34 @@ package mo;
 
 import com.google.common.base.CaseFormat;
 import javafx.application.Application;
-import javafx.event.EventHandler;
 import javafx.geometry.Pos;
-import javafx.scene.Cursor;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
-import javafx.scene.text.FontSmoothingType;
-import javafx.scene.text.Text;
-import javafx.stage.Modality;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-import javafx.stage.StageStyle;
-import javafx.stage.WindowEvent;
-import org.mockserver.client.MockServerClient;
-import org.mockserver.integration.ClientAndServer;
 import org.mockserver.model.MediaType;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class Main extends Application {
+
+    private MockServerTools mTool;
+
+    @Override
+    public void init() throws Exception {
+        mTool = MockServerTools.getInstance();
+        super.init();
+    }
+
+    @Override
+    public void stop() throws Exception {
+        mTool.shutdown();
+        super.stop();
+    }
 
     @Override
     public void start(Stage primaryStage) throws Exception {
@@ -126,7 +123,73 @@ public class Main extends Application {
             TextField portField = new TextField();
             portField.setText("1080");
 
-            VBox mockServerV = new VBox(hostLabel, hostField, portLabel, portField);
+            Label methodLabel = new Label("method");
+            RadioButton mb1 = new RadioButton("GET");
+            RadioButton mb2 = new RadioButton("POST");
+            RadioButton mb3 = new RadioButton("PUT");
+            RadioButton mb4 = new RadioButton("DELETE");
+            ToggleGroup methodGroup = new ToggleGroup();
+            mb1.setToggleGroup(methodGroup);
+            mb1.setSelected(true);
+            mb2.setToggleGroup(methodGroup);
+            mb3.setToggleGroup(methodGroup);
+            mb4.setToggleGroup(methodGroup);
+            HBox methodBox = new HBox(mb1, mb2, mb3, mb4);
+            methodBox.setSpacing(20);
+
+            Label pathLabel = new Label("path");
+            TextField pathText = new TextField();
+            pathText.setText("/");
+            Label scLabel = new Label("status code");
+            TextField scText = new TextField();
+            scText.setText("200");
+
+            Label ctLabel = new Label("content-type");
+            ChoiceBox ctBoxes = new ChoiceBox();
+            ctBoxes.getItems().add(MediaType.TEXT_PLAIN);
+            ctBoxes.getItems().add(MediaType.APPLICATION_JSON_UTF_8);
+            ctBoxes.getItems().add(MediaType.APPLICATION_XML_UTF_8);
+            ctBoxes.getItems().add(MediaType.TEXT_HTML_UTF_8);
+            ctBoxes.getItems().add(MediaType.MULTIPART_FORM_DATA);
+            ctBoxes.setValue(MediaType.TEXT_PLAIN);
+
+            Label bodyLabel = new Label("body");
+            TextArea bodyTa = new TextArea();
+
+            Button connBtn = new Button("Connect");
+            Button disConnBtn = new Button("Disconnect");
+            disConnBtn.setDisable(true);
+            connBtn.setOnAction(connEvent -> {
+                mTool.shutdown();
+                if(!mTool.isUp()){
+                    mTool.setHost(hostField.getText())
+                            .setPort(Integer.valueOf(portField.getText()))
+                            .setMethod(((RadioButton)methodGroup.getSelectedToggle()).getText())
+                            .setPath(pathText.getText())
+                            .setStatusCode(Integer.valueOf(scText.getText()))
+                            .setContentType((MediaType) ctBoxes.getValue())
+                            .setBody(bodyTa.getText())
+                            .startup();
+                }
+                connBtn.setDisable(true);
+                disConnBtn.setDisable(false);
+            });
+            disConnBtn.setOnAction(disConnEvent -> {
+                mTool.shutdown();
+                connBtn.setDisable(false);
+                disConnBtn.setDisable(true);
+            });
+
+            if(mTool.isUp()){
+                connBtn.setDisable(true);
+                disConnBtn.setDisable(false);
+            }
+
+            HBox buttonHBox = new HBox(connBtn, disConnBtn);
+
+            VBox mockServerV = new VBox(hostLabel, hostField, portLabel, portField, methodLabel, methodBox, pathLabel, pathText, scLabel, scText,
+                    ctLabel, ctBoxes, bodyLabel, bodyTa, buttonHBox);
+            mockServerV.setSpacing(5);
             mockServerV.setPrefWidth(805);
             HBox h = new HBox(vMenu, mockServerV);
             h.setAlignment(Pos.CENTER);
@@ -135,24 +198,9 @@ public class Main extends Application {
             primaryStage.setScene(s);
         });
         embeddedServerBtn.setOnAction(event -> {
-            if(1==1){
-                System.out.println("TODO");
-                return;
-            }
             // TODO DEV
-            MockServerTools mTool = MockServerTools.getInstance()
-                    .setHost("localhost")
-                    .setPort(1080)
-                    .setMethod("GET")
-                    .setPath("/")
-                    .setStatusCode(200)
-                    .setContentType(MediaType.APPLICATION_JSON_UTF_8)
-                    .setBody("{\"name\":\"kimi\"}")
-                    .startup();
-            primaryStage.setOnCloseRequest(event1 -> {
-                mTool.shutdown();
-            });
         });
+        embeddedServerBtn.setDisable(true);
 
         HBox h = new HBox(vMenu, v1, v2);
         h.setAlignment(Pos.CENTER);
@@ -168,20 +216,20 @@ public class Main extends Application {
         launch(args);
     }
 
-    private String convertToTool(String sql){
+    public String convertToTool(String sql){
         String result = sql
                 .replace("#{", ":")
                 .replace("}", "");
         return result;
     }
 
-    private String convertToMyBatis(String sql){
+    public String convertToMyBatis(String sql){
         String result = sql
                 .replaceAll(":([a-zA-Z0-9]+)", "#{$1}");
         return result;
     }
 
-    private String convertToCamelCase(String names){
+    public String convertToCamelCase(String names){
         List<String> ognNames = Arrays.asList(names.split("\n"));
         List<String> list = new ArrayList<>();
         String result;
